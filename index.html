@@ -1,0 +1,538 @@
+<!doctype html>
+<!--
+  A página da nota da pesquisa de satisfação: o que o cliente abre pelo link do WhatsApp, no
+  navegador do celular, sem instalar nada. Ele toca na nota de 1 a 5, escreve um comentário se
+  quiser e manda. A resposta vai direto para o banco, pelo código do link (o que vem depois do
+  "#"); a página não guarda nada.
+
+  Ela fala com o banco só por duas funções, as únicas que funcionam sem login:
+  ler_pedido_da_nota e responder_nota (supabase/migrations/20261024110000_pesquisa_de_satisfacao.sql).
+  O endereço do banco e a chave pública entram no lugar das marcas abaixo pelo botão "Publicar a
+  página da nota" (.github/workflows/publicar-pagina-da-nota.yml, que usa o montar.sh desta
+  pasta). Sem eles, a página abre em demonstração: a nota não sai daqui. Na demonstração, o fim
+  do endereço escolhe a situação: #respondida, #vencida ou #incompleto.
+
+  As cores são as do tema do app (DESIGN.md), nos dois temas. No pé, em cinza, "feito com" e o
+  nome do fio, com o corte em menta; na aba do navegador, o ícone do app.
+-->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Sua nota</title>
+    <!-- O ícone do fio na aba do navegador: o "f" claro com o corte em menta, como no app -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0zNTkuNSAtOTg1LjUgMTI1MiAxMjUyIj48cmVjdCB4PSItMzU5LjUiIHk9Ii05ODUuNSIgd2lkdGg9IjEyNTIiIGhlaWdodD0iMTI1MiIgcng9IjI4MCIgZmlsbD0iIzFDMjMyNSIvPjxnIHRyYW5zZm9ybT0ic2NhbGUoMSwtMSkiPjxwYXRoIGZpbGw9IiNFOUVGRUMiIGQ9Ik0xMDcgMFYzOTRIMjRWNTAwSDEwN1Y1NTBRMTA3IDYzMCAxNDguMCA2NzQuNVExODkgNzE5IDI3MyA3MTlRMzAyIDcxOSAzMzQuNSA3MDkuMFEzNjcgNjk5IDM5NCA2ODVMMzQ1IDU5MFEzMjkgNTk4IDMxNi4wIDYwMi4wUTMwMyA2MDYgMjkyIDYwNlEyNjUgNjA2IDI1Mi4wIDU4Ny41UTIzOSA1NjkgMjM5IDUyOFY1MDBIMzYyVjM5NEgyMzlWMFoiLz48cGF0aCBmaWxsPSIjOEZEQ0MzIiBkPSJNNTcyIDY0NC41aDEyOGE0NS41IDQ1LjUgMCAwIDEgMCA5MWgtMTI4YTQ1LjUgNDUuNSAwIDAgMSAwIC05MXoiIHRyYW5zZm9ybT0icm90YXRlKDI4IDYzNiA2OTApIi8+PC9nPjwvc3ZnPg=="
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600&display=swap"
+    />
+    <style>
+      :root {
+        --fundo: #f6f5f1;
+        --superficie: #ffffff;
+        --linha: #e6e3dc;
+        --borda-do-campo: #7d8781;
+        --texto: #1c2321;
+        --suave: #5f6965;
+        --destaque: #6db8a0;
+        --sobre-destaque: #0e2a22;
+        --destaque-texto: #1f6a54;
+        --vermelho: #a4442f;
+        --vermelho-fundo: rgba(184, 80, 58, 0.1);
+        --texto-base: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --fundo: #14191a;
+          --superficie: #1c2325;
+          --linha: #2a3437;
+          --borda-do-campo: #6c7b76;
+          --texto: #e9efec;
+          --suave: #9ba8a4;
+          --destaque: #8fdcc3;
+          --sobre-destaque: #0e2a22;
+          --destaque-texto: #a7e6d1;
+          --vermelho: #f2a493;
+          --vermelho-fundo: rgba(242, 164, 147, 0.14);
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --fundo: #14191a;
+        --superficie: #1c2325;
+        --linha: #2a3437;
+        --borda-do-campo: #6c7b76;
+        --texto: #e9efec;
+        --suave: #9ba8a4;
+        --destaque: #8fdcc3;
+        --sobre-destaque: #0e2a22;
+        --destaque-texto: #a7e6d1;
+        --vermelho: #f2a493;
+        --vermelho-fundo: rgba(242, 164, 147, 0.14);
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--fundo);
+        color: var(--texto);
+        font-family: var(--texto-base);
+        font-size: 1rem;
+        line-height: 1.45;
+      }
+      main {
+        max-width: 26rem;
+        margin: 0 auto;
+        padding-block: max(2rem, env(safe-area-inset-top, 0px)) 2.5rem;
+        padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+        padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      section {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .sobre {
+        font-size: 0.875rem;
+        color: var(--suave);
+      }
+      h1 {
+        margin: 0.25rem 0 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        text-wrap: balance;
+      }
+      p {
+        margin: 0;
+      }
+      .explicacao {
+        color: var(--suave);
+      }
+      fieldset {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      legend {
+        padding: 0;
+        margin-bottom: 0.5rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+      }
+      .notas {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .notas label {
+        flex: 1;
+        position: relative;
+        min-width: 0;
+      }
+      .notas input {
+        position: absolute;
+        opacity: 0;
+        inset: 0;
+        margin: 0;
+      }
+      .notas span {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 1px solid var(--borda-do-campo);
+        background: var(--superficie);
+        font-family: var(--mono);
+        font-size: 1.125rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background-color 0.15s,
+          border-color 0.15s;
+      }
+      .notas input:checked + span {
+        background: var(--destaque);
+        border-color: var(--destaque);
+        color: var(--sobre-destaque);
+      }
+      .notas input:focus-visible + span {
+        outline: 2px solid var(--destaque-texto);
+        outline-offset: 2px;
+      }
+      .legenda-das-notas {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8125rem;
+        color: var(--suave);
+      }
+      .campo {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .campo label {
+        font-size: 0.9375rem;
+        font-weight: 500;
+      }
+      textarea {
+        width: 100%;
+        min-height: 6.5rem;
+        padding: 0.75rem 0.875rem;
+        border-radius: 0.875rem;
+        border: 1px solid var(--borda-do-campo);
+        background: var(--superficie);
+        color: var(--texto);
+        font: inherit;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: var(--destaque-texto);
+      }
+      .contador {
+        align-self: flex-end;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--suave);
+      }
+      button {
+        width: 100%;
+        min-height: 3.25rem;
+        border: 0;
+        border-radius: 0.875rem;
+        background: var(--destaque);
+        color: var(--sobre-destaque);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--destaque-texto);
+        outline-offset: 2px;
+      }
+      .rodape {
+        font-size: 0.8125rem;
+        color: var(--suave);
+        text-align: center;
+      }
+      .erro {
+        padding: 0.75rem 0.875rem;
+        border-radius: 0.75rem;
+        background: var(--vermelho-fundo);
+        color: var(--vermelho);
+        font-size: 0.875rem;
+      }
+      /* O pé da página, com o nome do fio: o "fıo" em cinza e o corte em menta */
+      .feito-com {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8125rem;
+        color: var(--suave);
+      }
+      .feito-com .letras {
+        fill: var(--suave);
+      }
+      .feito-com .corte {
+        fill: var(--destaque);
+      }
+      .demonstracao {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--suave);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <p class="sobre" id="barbearia" hidden></p>
+        <h1 id="titulo">Abrindo...</h1>
+      </div>
+
+      <section id="pergunta" hidden>
+        <form id="formulario" novalidate>
+          <section>
+            <fieldset>
+              <legend>Toque na sua nota</legend>
+              <div class="notas">
+                <label><input type="radio" name="nota" value="1" /><span>1</span></label>
+                <label><input type="radio" name="nota" value="2" /><span>2</span></label>
+                <label><input type="radio" name="nota" value="3" /><span>3</span></label>
+                <label><input type="radio" name="nota" value="4" /><span>4</span></label>
+                <label><input type="radio" name="nota" value="5" /><span>5</span></label>
+              </div>
+              <div class="legenda-das-notas" aria-hidden="true">
+                <span>Ruim</span><span>Ótimo</span>
+              </div>
+            </fieldset>
+            <div class="campo">
+              <label for="comentario">Quer contar mais? (opcional)</label>
+              <textarea id="comentario" maxlength="300" aria-describedby="contador"></textarea>
+              <span class="contador" id="contador">0/300</span>
+            </div>
+            <p class="erro" id="erro-ao-mandar" role="alert" hidden></p>
+            <button type="submit" id="mandar" disabled>Mandar a nota</button>
+            <p class="rodape">Só a barbearia vê a sua resposta.</p>
+          </section>
+        </form>
+      </section>
+
+      <section id="fim" hidden>
+        <p class="explicacao" id="explicacao"></p>
+        <button type="button" id="tentar-de-novo" hidden>Tentar de novo</button>
+      </section>
+
+      <p class="feito-com">
+        feito com
+        <svg
+          class="marca"
+          viewBox="0 -780 1236 800"
+          width="25"
+          height="16"
+          role="img"
+          aria-label="fio"
+        >
+          <g transform="scale(1,-1)">
+            <path
+              class="letras"
+              d="M107 0V394H24V500H107V550Q107 630 148.0 674.5Q189 719 273 719Q302 719 334.5 709.0Q367 699 394 685L345 590Q329 598 316.0 602.0Q303 606 292 606Q265 606 252.0 587.5Q239 569 239 528V500H362V394H239V0ZM458 0V500H590V0ZM947 -12Q871 -12 811.5 21.5Q752 55 718.5 114.0Q685 173 685 250Q685 327 718.0 386.0Q751 445 810.0 478.5Q869 512 945 512Q1022 512 1081.0 478.5Q1140 445 1173.0 386.0Q1206 327 1206 250Q1206 173 1173.0 114.0Q1140 55 1081.5 21.5Q1023 -12 947 -12ZM947 110Q984 110 1012.0 128.0Q1040 146 1055.5 177.5Q1071 209 1071 250Q1071 291 1055.0 322.5Q1039 354 1010.5 372.0Q982 390 945 390Q909 390 880.5 372.0Q852 354 836.0 322.5Q820 291 820 250Q820 209 836.0 177.5Q852 146 881.0 128.0Q910 110 947 110Z"
+            />
+            <path
+              class="corte"
+              d="M460 644.5h128a45.5 45.5 0 0 1 0 91h-128a45.5 45.5 0 0 1 0 -91z"
+              transform="rotate(28 524 690)"
+            />
+          </g>
+        </svg>
+      </p>
+
+      <p class="demonstracao" id="aviso-de-demonstracao" hidden>
+        Demonstração: a nota não sai desta página
+      </p>
+    </main>
+
+    <script>
+      'use strict';
+
+      // Preenchidos pelo botão "Publicar a página da nota" (montar.sh)
+      const BANCO = {
+        endereco: 'https://ggozcmtsodwvkjrpryry.supabase.co',
+        chave: 'sb_publishable_vozE7pam_r7lFis8Fu2leg_ncSwlcD_',
+      };
+      // Sem o endereço trocado, a página é a demonstração
+      const DEMONSTRACAO = !BANCO.endereco.startsWith('https://');
+
+      /** O código que o banco sorteia: 22 letras, números, "-" e "_" (src/pesquisa/regras/link-da-nota.ts) */
+      const FORMATO_DO_CODIGO = /^[A-Za-z0-9_-]{22}$/;
+      const COMENTARIO_MAXIMO = 300;
+
+      const codigo = location.hash.slice(1);
+      let pedido = null;
+
+      const elemento = (id) => document.getElementById(id);
+
+      /** Chama uma função do banco sem login, pela chave pública */
+      async function chamar(funcao, valores) {
+        const cabecalhos = { 'Content-Type': 'application/json', apikey: BANCO.chave };
+        // A chave antiga do Supabase (um JWT) vai também no Authorization; a nova, só no apikey
+        if (BANCO.chave.startsWith('eyJ')) {
+          cabecalhos.Authorization = 'Bearer ' + BANCO.chave;
+        }
+        const resposta = await fetch(BANCO.endereco + '/rest/v1/rpc/' + funcao, {
+          method: 'POST',
+          headers: cabecalhos,
+          body: JSON.stringify(valores),
+        });
+        if (!resposta.ok) {
+          throw new Error('O banco respondeu ' + resposta.status);
+        }
+        return resposta.json();
+      }
+
+      /** Na demonstração, o fim do endereço escolhe a situação */
+      function pedidoDeDemonstracao() {
+        if (codigo === 'incompleto') {
+          return null;
+        }
+        const situacao = codigo === 'respondida' || codigo === 'vencida' ? codigo : 'aberta';
+        return { situacao, cliente: 'Caio', barbeiro: 'Diego', barbearia: 'Barbearia do João' };
+      }
+
+      function lerPedido() {
+        if (DEMONSTRACAO) {
+          return Promise.resolve(pedidoDeDemonstracao());
+        }
+        if (!FORMATO_DO_CODIGO.test(codigo)) {
+          return Promise.resolve(null);
+        }
+        return chamar('ler_pedido_da_nota', { codigo_do_link: codigo });
+      }
+
+      function mandarNota(nota, comentario) {
+        if (DEMONSTRACAO) {
+          return new Promise((pronto) => setTimeout(() => pronto('enviada'), 600));
+        }
+        return chamar('responder_nota', {
+          codigo_do_link: codigo,
+          nota_dada: nota,
+          comentario_dado: comentario,
+        });
+      }
+
+      function nome(texto) {
+        return typeof texto === 'string' ? texto.trim() : '';
+      }
+
+      /** "Obrigado, Caio!", ou só "Obrigado!" sem o nome */
+      function obrigado() {
+        const cliente = nome(pedido && pedido.cliente);
+        return cliente === '' ? 'Obrigado!' : 'Obrigado, ' + cliente + '!';
+      }
+
+      function mostrarBarbearia() {
+        const barbearia = nome(pedido && pedido.barbearia);
+        elemento('barbearia').textContent = barbearia;
+        elemento('barbearia').hidden = barbearia === '';
+      }
+
+      function mostrarPergunta() {
+        const cliente = nome(pedido.cliente);
+        const barbeiro = nome(pedido.barbeiro);
+        const oi = cliente === '' ? 'Oi!' : 'Oi, ' + cliente + '!';
+        const como =
+          barbeiro === ''
+            ? 'Como foi o seu atendimento?'
+            : 'Como foi o seu atendimento com o ' + barbeiro + '?';
+        elemento('titulo').textContent = oi + ' ' + como;
+        elemento('pergunta').hidden = false;
+        elemento('fim').hidden = true;
+      }
+
+      /** O fim da conversa: o título, a explicação e, quando faltou internet, o "Tentar de novo" */
+      function mostrarFim(titulo, explicacao, podeTentarDeNovo) {
+        elemento('titulo').textContent = titulo;
+        elemento('explicacao').textContent = explicacao;
+        elemento('tentar-de-novo').hidden = !podeTentarDeNovo;
+        elemento('pergunta').hidden = true;
+        elemento('fim').hidden = false;
+      }
+
+      const SITUACOES = {
+        respondida: () => [obrigado(), 'Este link já recebeu a sua nota. Ela chegou à barbearia.'],
+        vencida: () => [
+          'Este link venceu',
+          'Ele valia por 7 dias. Se quiser contar como foi, fale direto com a barbearia.',
+        ],
+        incompleto: () => [
+          'Não achamos este link',
+          'Confira se ele chegou inteiro na mensagem. Se o problema continuar, fale com a barbearia.',
+        ],
+      };
+
+      function mostrarSituacao(situacao) {
+        const [titulo, explicacao] = (SITUACOES[situacao] || SITUACOES.incompleto)();
+        mostrarFim(titulo, explicacao, false);
+      }
+
+      async function abrir() {
+        elemento('titulo').textContent = 'Abrindo...';
+        elemento('fim').hidden = true;
+        try {
+          pedido = await lerPedido();
+        } catch {
+          mostrarFim('Sem conexão', 'Confira a internet do celular e tente de novo.', true);
+          return;
+        }
+        mostrarBarbearia();
+        if (pedido === null) {
+          mostrarSituacao('incompleto');
+        } else if (pedido.situacao === 'aberta') {
+          mostrarPergunta();
+        } else {
+          mostrarSituacao(pedido.situacao);
+        }
+      }
+
+      function notaEscolhida() {
+        const marcada = document.querySelector('input[name="nota"]:checked');
+        return marcada === null ? null : Number(marcada.value);
+      }
+
+      async function aoMandar(evento) {
+        evento.preventDefault();
+        const nota = notaEscolhida();
+        if (nota === null) {
+          return;
+        }
+        const botao = elemento('mandar');
+        const erro = elemento('erro-ao-mandar');
+        botao.disabled = true;
+        botao.textContent = 'Mandando...';
+        erro.hidden = true;
+        try {
+          const comentario = elemento('comentario').value.trim().slice(0, COMENTARIO_MAXIMO);
+          const resultado = await mandarNota(nota, comentario === '' ? null : comentario);
+          if (resultado === 'enviada') {
+            mostrarFim(obrigado(), 'A sua nota chegou à barbearia.', false);
+          } else {
+            mostrarSituacao(resultado === null ? 'incompleto' : resultado);
+          }
+        } catch {
+          erro.textContent = 'Não deu para mandar. Confira a internet do celular e tente de novo.';
+          erro.hidden = false;
+          botao.disabled = false;
+          botao.textContent = 'Mandar a nota';
+        }
+      }
+
+      document.querySelectorAll('input[name="nota"]').forEach((opcao) => {
+        opcao.addEventListener('change', () => {
+          elemento('mandar').disabled = false;
+        });
+      });
+      elemento('comentario').addEventListener('input', (evento) => {
+        elemento('contador').textContent = evento.target.value.length + '/' + COMENTARIO_MAXIMO;
+      });
+      elemento('formulario').addEventListener('submit', aoMandar);
+      elemento('tentar-de-novo').addEventListener('click', abrir);
+      // Outro código no mesmo endereço (o link colado por cima) abre do começo
+      window.addEventListener('hashchange', () => location.reload());
+      elemento('aviso-de-demonstracao').hidden = !DEMONSTRACAO;
+      abrir();
+    </script>
+  </body>
+</html>
